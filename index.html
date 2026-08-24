@@ -705,7 +705,9 @@ document.querySelectorAll('.subj-tab').forEach(t => t.addEventListener('click', 
 function renderLessons(subj) {
   const iconMap = { maths:'ti-math-symbols', english:'ti-pencil', science:'ti-flask' };
   const list = document.getElementById('lesson-list');
-  list.innerHTML = LESSONS[subj].map(l => `
+  const matching = LESSONS[subj].filter(l => l.level === state.year);
+  const lessons = matching.length ? matching : LESSONS[subj];
+  list.innerHTML = lessons.map(l => `
     <div class="lesson-card" onclick="openLesson('${subj}','${l.id}')">
       <div class="lesson-ico"><i class="ti ${iconMap[subj]}" aria-hidden="true"></i></div>
       <div class="lesson-txt">
@@ -741,9 +743,13 @@ function initFreeChat() {
     ['Help me with fractions', "Explain Macbeth's themes", 'What are plant cells?']);
 }
 
+const MODE_PROMPTS = { explain: 'Explain this to me', example: 'Give me an example', simple: 'Explain that more simply' };
 document.querySelectorAll('.mode-chip').forEach(m => m.addEventListener('click', () => {
   document.querySelectorAll('.mode-chip').forEach(x => x.classList.remove('active'));
   m.classList.add('active'); state.inputMode = m.dataset.mode;
+  const prompt = MODE_PROMPTS[m.dataset.mode];
+  addUserBubble(prompt);
+  callTutor(prompt);
 }));
 
 const ta = document.getElementById('chat-input');
@@ -796,7 +802,10 @@ async function callTutor(userMsg) {
 
   state.messages.push({ role:'user', content:userMsg });
 
-  const systemPrompt = `You are Kip, a warm UK school AI tutor. Topic: ${topic}. ${levelCtx} ${styleCtx} ${modeCtx}
+  const topicCtx = lesson
+    ? `This lesson's focus is: ${topic}. If the student asks about something else entirely, still help them with it — don't refuse or deflect — then gently offer to return to ${topic} afterward.`
+    : `Topic: ${topic}.`;
+  const systemPrompt = `You are Kip, a warm UK school AI tutor. ${topicCtx} ${levelCtx} ${styleCtx} ${modeCtx}
 Rules: UK English and curriculum terms. Keep replies short (3-6 sentences/steps). Friendly, never condescending. Wrap worked examples in <div class="example-box">. Use <ul><li> for steps. End with one short follow-up question. No "Kip:" label prefix.`;
 
   try {
